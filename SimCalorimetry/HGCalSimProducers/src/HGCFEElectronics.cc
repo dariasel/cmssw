@@ -252,7 +252,11 @@ void HGCFEElectronics<DFr>::runTrivialShaper(
   }
 }
 
-//
+// Updated shaper for the updated realistic sci digitiser
+// No pulse shape at the moment (10/2026), just 0 0 1 0 0 (1 for sample [2])
+// ADCs are passed
+// "Trivial" TOT implementation done
+// ****************************************************************************************
 template <class DFr>
 void HGCFEElectronics<DFr>::runSimpleShaper(DFr& dataFrame,
                                             HGCSimHitData& chargeColl,
@@ -274,6 +278,7 @@ void HGCFEElectronics<DFr>::runSimpleShaper(DFr& dataFrame,
     debug |= (charge > adcThreshold_fC_);
 #endif
 */
+
 //    if (debug)
 //      edm::LogVerbatim("HGCFE") << "\t Redistributing SARS ADC" << charge << " @ " << it;
 
@@ -289,89 +294,53 @@ void HGCFEElectronics<DFr>::runSimpleShaper(DFr& dataFrame,
         edm::LogVerbatim("HGCFE") << " | " << it + ipulse << " " << chargeLeak;
     }
 
-//    if (debug)
-//      edm::LogVerbatim("HGCFE") << std::endl;
-  }
-
-/*
-  for (int it = 0; it < (int)(newCharge_.size()); it++) {
-    //brute force saturation, maybe could to better with an exponential like saturation
-    const uint32_t adc = std::floor(std::min(newCharge_[it], maxADC) / lsbADC);
-    HGCSample newSample;
-    newSample.set(adc > thrADC, false, gainIdx, 0, adc);
-    dataFrame.setSample(it, newSample);
-
     if (debug)
-      edm::LogVerbatim("HGCFE") << adc << " (" << std::min(newCharge_[it], maxADC) << "/" << lsbADC << " ) ";
+      edm::LogVerbatim("HGCFE") << std::endl;
   }
-*/
-
-// new version of the simple shaper with "poor man's" TOT implementation
 
 
   for (int it = 0; it < (int)(newCharge_.size()); it++) {
-  //const float adc = newCharge_[it];
   const uint32_t adc = std::floor(newCharge_[it]);
- // for (int it = 0; it < (int)(chargeColl.size()); it++) {
   HGCSample newSample;
+
+// ratio between ADC bins and TDC bins is approx 3, which is used here for the "trivial tot":
+// if the signal is outside the dynamic range of the ADC, then setToAValid(true) and set the sample to adc/3, provided adc/3 is within tdc range (less than 4095)
+// setToAValid used, since some tot flag is needed and this seems to be the one available in the structure of these sample. TODO: check if its ok / introduce new
+// setting the digi value to integer adc/3 and making sure it is know via the setToAValit true
+// this way in analysis this can be used as a flag and the digi multiplied by 3 (to emulate TOT to ADC conversion)
+// !!!! at the moment (10/2026) this is only compatible with the separate analysis of the digis
+// TODO: need to make necessary changes, such that this works properly with the rest of the CMSSW reconstruction chain
+
+// Important note: a strange behaviour of the <sample>.set() was observed: if the value exceeded the 4095 by n (0 < n < 4095), the value of the sample (the data) was set to n;
+// when the value exceeded 4095 by i*n, the value of the sample (the data) was also set to n;
+// A specific example: if adc = 4096, newSample.set(x, x, x, x, adc).data() would be 0;  for adc = 4196, the .data() would be 100; for adc = 8192 (2*4096) the .data() was 0 again;
+// for adc = 5953, .data() was 1857 = 5953-4096 and so on. TODO: to be communicated to the cmssw development group. For the below implementation this is not an issue for now.
+
   if (adc >= maxADC && adc/3 < 4095){
-  //if (adc >= maxADC && adc < 12285){
-  //adcnew=3*std::floor(adc/3);
-  newSample.set(adc > thrADC, false, gainIdx, 0, adc/3);
-  newSample.setToAValid(true);
-    dataFrame.setSample(it, newSample);
-
-   // if (debug && adc>3000){
-   //   edm::LogVerbatim("HGCFE") << newSample.data() << " new sample data adc3 " << newSample.kDataMask << " kDataMask ";
-   //   edm::LogVerbatim("HGCFE") << newSample.mode() << " new sample mode adc3 " << newSample.threshold() << " threshold ";}
-   
-}
- else if (adc >= maxADC && adc/3 >= 4095){
- //else if (adc >= maxADC && adc >= 12285){
-
-  //adcnew=3*4095;
-  newSample.set(adc > thrADC, false, gainIdx, 0, 4095);
-  newSample.setToAValid(true);
-    dataFrame.setSample(it, newSample);
-
-    //if (debug){
-    //  edm::LogVerbatim("HGCFE") << newSample.data() << " new sample 4095 " << "";}
-    	
+  	newSample.set(adc > thrADC, false, gainIdx, 0, adc/3);
+  	newSample.setToAValid(true);
+  	dataFrame.setSample(it, newSample);
+  }
+  else if (adc >= maxADC && adc/3 >= 4095){
+  	newSample.set(adc > thrADC, false, gainIdx, 0, 4095);  // if the signal is out of the TDC dynamic range, set the value to the maximum
+  	newSample.setToAValid(true);
+ 	dataFrame.setSample(it, newSample);
   }
   else {
-  //adcnew=adc;
-  newSample.set(adc > thrADC, false, gainIdx, 0, adc);
-  newSample.setToAValid(false);
-    dataFrame.setSample(it, newSample);
-
-    //if (debug && adc>300){
-    //  edm::LogVerbatim("HGCFE") << newSample.data() << " new sample adc " << "";}
-
-
+  	newSample.set(adc > thrADC, false, gainIdx, 0, adc);
+  	newSample.setToAValid(false);
+  	dataFrame.setSample(it, newSample);
   }
-//   newSample.set(adc > thrADC, false, gainIdx, 0, adcnew);
-
-   // if (debug && adc/3>2000){
-   //   edm::LogVerbatim("HGCFE") << adc << " adc (adc/3 = " << adc/3 << " ) ";
-   //   edm::LogVerbatim("HGCFE") << newSample.data() << " dataframe sample " << "";
-     // edm::LogVerbatim("HGCFE") << adc << " (" << std::min(newCharge_[it], maxADC) << "/" << lsbADC << " ) ";
-   //   edm::LogVerbatim("HGCFE") << " --------------------------- " ;
-//	}
-
-
-//    dataFrame.setSample(it, newSample);
-
-
-
-  }
-
-
-//  if (debug) {
-//    std::ostringstream msg;
-//    dataFrame.print(msg);
-//    edm::LogVerbatim("HGCFE") << msg.str();
-//  }
 }
+
+
+  if (debug) {
+    std::ostringstream msg;
+    dataFrame.print(msg);
+    edm::LogVerbatim("HGCFE") << msg.str();
+  }
+}
+// ****************************************************************************************
 
 
 //
