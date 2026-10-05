@@ -7,6 +7,8 @@
 #include <string>
 #include <array>
 
+
+
 /**
    @class HGCalSciNoiseMap
    @short derives from HGCalRadiation map to parse fluence/dose parameters, provides Sci-specific functions
@@ -37,8 +39,8 @@ public:
   };
 
   struct SiPMonTileCharacteristics {
-    SiPMonTileCharacteristics() : s(0.), lySF(0.), n(0.), xtalk(0), gain(0), thrADC(0), ntotalPE(0) {}
-    float s, lySF, n, xtalk;
+    SiPMonTileCharacteristics() : s(0.), lySF(0.), n(0.), xtalk(0), L(0.), gain(0), thrADC(0), ntotalPE(0) {}
+    float s, lySF, n, xtalk, L;
     unsigned short gain, thrADC, ntotalPE;
   };
 
@@ -49,11 +51,19 @@ public:
      @short returns the signal scaling and the noise
   */
   double scaleByTileArea(const HGCScintillatorDetId &, const double);
+  double LYByTileArea(const HGCScintillatorDetId &, const double, const long long int, const double); //const double
   std::pair<double, GainRange_t> scaleBySipmArea(const HGCScintillatorDetId &, const double, const GainRange_t &);
   SiPMonTileCharacteristics scaleByDose(const HGCScintillatorDetId &,
                                         const double,
                                         const int aimMIPtoADC = 15,
                                         const GainRange_t gainPreChoice = GainRange_t::AUTO);
+  SiPMonTileCharacteristics scaleByDose_Daria(const HGCScintillatorDetId &,
+                                        const double,
+                                        const double,
+                                        const double,
+                                        const int aimMIPtoADC = 15,
+                                        const GainRange_t gainPreChoice = GainRange_t::AUTO);                                      
+                                        
 
   void setDoseMap(const std::string &, const unsigned int);
   void setSipmMap(const std::string &);

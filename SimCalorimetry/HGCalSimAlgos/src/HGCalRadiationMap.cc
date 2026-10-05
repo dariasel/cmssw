@@ -25,6 +25,23 @@ double HGCalRadiationMap::computeRadius(const HGCScintillatorDetId& cellId) {
 }
 
 //
+GlobalPoint HGCalRadiationMap::computePos(const HGCScintillatorDetId& cellId) {
+  GlobalPoint global = geom()->getPosition(cellId);
+  //global.X = global.x();
+  //global.Y = global.y();
+  //global.Z = global.z();
+  return global;
+}
+
+double HGCalRadiationMap::computeArea(const HGCScintillatorDetId& cellId) {
+  double area = geom()->getArea(cellId);
+  //global.X = global.x();
+  //global.Y = global.y();
+  //global.Z = global.z();
+  return area;
+}
+
+//
 double HGCalRadiationMap::getDoseValue(const int subdet, const int layer, const double radius, bool logVal) {
   std::pair<int, int> key(subdet, layer);
 

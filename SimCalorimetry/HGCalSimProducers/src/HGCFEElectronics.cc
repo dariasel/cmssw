@@ -122,6 +122,97 @@ HGCFEElectronics<DFr>::HGCFEElectronics(const edm::ParameterSet& ps)
   }
 }
 
+
+//  to use with proper calice digitizer
+
+template <class DFr>
+void HGCFEElectronics<DFr>::runNoShaper(
+    DFr& dataFrame, HGCSimHitData& chargeColl, uint32_t thrADC, float lsbADC, uint32_t gainIdx, float maxADC) {
+  bool debug(false);
+
+#ifdef EDM_ML_DEBUG
+  for (int it = 0; it < (int)(chargeColl.size()); it++)
+    debug |= (chargeColl[it] > adcThreshold_fC_);
+#endif
+
+  if (debug)
+    edm::LogVerbatim("HGCFE") << "[runNoShaper]";
+
+  for (int it = 0; it < (int)(chargeColl.size()); it++) {
+    const uint32_t adc = chargeColl[it];
+    HGCSample newSample;
+    newSample.set(adc > thrADC, false, gainIdx, 0, adc);
+    dataFrame.setSample(it, newSample);
+
+}
+}
+
+
+
+
+
+template <class DFr>
+void HGCFEElectronics<DFr>::runMinShaper(DFr& dataFrame,
+                                            HGCSimHitData& chargeColl,
+                                            CLHEP::HepRandomEngine* engine,
+                                            float thrADC,
+                                            float gainVal,
+                                            float maxADC,
+                                            const hgc_digi::FEADCPulseShape& adcPulse) {
+  //convolute with pulse shape to compute new ADCs
+  newCharge_.fill(0.f);
+  bool debug(false);
+  for (int it = 0; it < (int)(chargeColl.size()); it++) {
+    float charge(chargeColl[it]/1e8);
+    if (charge == 0.f)
+      continue;
+/*
+#ifdef EDM_ML_DEBUG
+    debug |= (charge > adcThreshold_fC_);
+#endif
+*/
+    if (debug)
+      edm::LogVerbatim("HGCFE") << "\t Redistributing SARS ADC " << charge << " @ " << it;
+
+    for (int ipulse = -2; ipulse < (int)(adcPulse.size()) - 2; ipulse++) {
+      if (it + ipulse < 0)
+        continue;
+      if (it + ipulse >= (int)(dataFrame.size()))
+        continue;
+      const float chargeLeak = charge * adcPulse[(ipulse + 2)];
+      newCharge_[it + ipulse] += chargeLeak;
+
+      if (debug)
+        edm::LogVerbatim("HGCFE") << " | " << it + ipulse << " " << chargeLeak;
+    }
+
+    if (debug)
+      edm::LogVerbatim("HGCFE") << std::endl;
+  }
+
+  for (int it = 0; it < (int)(newCharge_.size()); it++) {
+    //brute force saturation, maybe could to better with an exponential like saturation
+    const uint32_t adc = std::floor(std::min(newCharge_[it], maxADC/gainVal)*gainVal);
+    HGCSample newSample;
+    newSample.set(adc > thrADC, false, 0, 0, adc);
+    dataFrame.setSample(it, newSample);
+
+    if (debug)
+      edm::LogVerbatim("HGCFE") << adc << " (" << std::min(newCharge_[it], maxADC/gainVal) << " ) ";
+  }
+
+  if (debug) {
+    std::ostringstream msg;
+    dataFrame.print(msg);
+    edm::LogVerbatim("HGCFE") << msg.str();
+  }
+}
+
+
+
+
+
+
 //
 template <class DFr>
 void HGCFEElectronics<DFr>::runTrivialShaper(
@@ -178,12 +269,13 @@ void HGCFEElectronics<DFr>::runSimpleShaper(DFr& dataFrame,
     if (charge == 0.f)
       continue;
 
+/*
 #ifdef EDM_ML_DEBUG
     debug |= (charge > adcThreshold_fC_);
 #endif
-
-    if (debug)
-      edm::LogVerbatim("HGCFE") << "\t Redistributing SARS ADC" << charge << " @ " << it;
+*/
+//    if (debug)
+//      edm::LogVerbatim("HGCFE") << "\t Redistributing SARS ADC" << charge << " @ " << it;
 
     for (int ipulse = -2; ipulse < (int)(adcPulse.size()) - 2; ipulse++) {
       if (it + ipulse < 0)
@@ -197,10 +289,11 @@ void HGCFEElectronics<DFr>::runSimpleShaper(DFr& dataFrame,
         edm::LogVerbatim("HGCFE") << " | " << it + ipulse << " " << chargeLeak;
     }
 
-    if (debug)
-      edm::LogVerbatim("HGCFE") << std::endl;
+//    if (debug)
+//      edm::LogVerbatim("HGCFE") << std::endl;
   }
 
+/*
   for (int it = 0; it < (int)(newCharge_.size()); it++) {
     //brute force saturation, maybe could to better with an exponential like saturation
     const uint32_t adc = std::floor(std::min(newCharge_[it], maxADC) / lsbADC);
@@ -211,13 +304,75 @@ void HGCFEElectronics<DFr>::runSimpleShaper(DFr& dataFrame,
     if (debug)
       edm::LogVerbatim("HGCFE") << adc << " (" << std::min(newCharge_[it], maxADC) << "/" << lsbADC << " ) ";
   }
+*/
 
-  if (debug) {
-    std::ostringstream msg;
-    dataFrame.print(msg);
-    edm::LogVerbatim("HGCFE") << msg.str();
-  }
+// new version of the simple shaper with "poor man's" TOT implementation
+
+
+  for (int it = 0; it < (int)(newCharge_.size()); it++) {
+  //const float adc = newCharge_[it];
+  const uint32_t adc = std::floor(newCharge_[it]);
+ // for (int it = 0; it < (int)(chargeColl.size()); it++) {
+  HGCSample newSample;
+  if (adc >= maxADC && adc/3 < 4095){
+  //if (adc >= maxADC && adc < 12285){
+  //adcnew=3*std::floor(adc/3);
+  newSample.set(adc > thrADC, false, gainIdx, 0, adc/3);
+  newSample.setToAValid(true);
+    dataFrame.setSample(it, newSample);
+
+   // if (debug && adc>3000){
+   //   edm::LogVerbatim("HGCFE") << newSample.data() << " new sample data adc3 " << newSample.kDataMask << " kDataMask ";
+   //   edm::LogVerbatim("HGCFE") << newSample.mode() << " new sample mode adc3 " << newSample.threshold() << " threshold ";}
+   
 }
+ else if (adc >= maxADC && adc/3 >= 4095){
+ //else if (adc >= maxADC && adc >= 12285){
+
+  //adcnew=3*4095;
+  newSample.set(adc > thrADC, false, gainIdx, 0, 4095);
+  newSample.setToAValid(true);
+    dataFrame.setSample(it, newSample);
+
+    //if (debug){
+    //  edm::LogVerbatim("HGCFE") << newSample.data() << " new sample 4095 " << "";}
+    	
+  }
+  else {
+  //adcnew=adc;
+  newSample.set(adc > thrADC, false, gainIdx, 0, adc);
+  newSample.setToAValid(false);
+    dataFrame.setSample(it, newSample);
+
+    //if (debug && adc>300){
+    //  edm::LogVerbatim("HGCFE") << newSample.data() << " new sample adc " << "";}
+
+
+  }
+//   newSample.set(adc > thrADC, false, gainIdx, 0, adcnew);
+
+   // if (debug && adc/3>2000){
+   //   edm::LogVerbatim("HGCFE") << adc << " adc (adc/3 = " << adc/3 << " ) ";
+   //   edm::LogVerbatim("HGCFE") << newSample.data() << " dataframe sample " << "";
+     // edm::LogVerbatim("HGCFE") << adc << " (" << std::min(newCharge_[it], maxADC) << "/" << lsbADC << " ) ";
+   //   edm::LogVerbatim("HGCFE") << " --------------------------- " ;
+//	}
+
+
+//    dataFrame.setSample(it, newSample);
+
+
+
+  }
+
+
+//  if (debug) {
+//    std::ostringstream msg;
+//    dataFrame.print(msg);
+//    edm::LogVerbatim("HGCFE") << msg.str();
+//  }
+}
+
 
 //
 template <class DFr>
@@ -232,7 +387,9 @@ void HGCFEElectronics<DFr>::runShaperWithToT(DFr& dataFrame,
                                              int thickness,
                                              float tdcOnsetAuto,
                                              float noiseWidth,
-                                             const hgc_digi::FEADCPulseShape& adcPulse) {
+                                             const hgc_digi::FEADCPulseShape& adcPulse) 
+                                             
+{
   busyFlags_.fill(false);
   totFlags_.fill(false);
   toaFlags_.fill(false);
@@ -244,9 +401,11 @@ void HGCFEElectronics<DFr>::runShaperWithToT(DFr& dataFrame,
 #else
   constexpr bool debug_state(false);
 #endif
-
-  bool debug = debug_state;
-
+  
+  //bool debug = debug_state;
+  bool debug(true);
+  
+  
   float timeToA = 0.f;
 
   //configure the ADC <-> TDC transition depending on the value passed as argument
@@ -507,7 +666,9 @@ void HGCFEElectronics<DFr>::runShaperWithToT(DFr& dataFrame,
     dataFrame.print(msg);
     edm::LogVerbatim("HGCFE") << msg.str();
   }
+
 }
+
 
 // cause the compiler to generate the appropriate code
 #include "DataFormats/HGCDigi/interface/HGCDigiCollections.h"

@@ -18,6 +18,8 @@ public:
         : a_(0.), b_(0.), c_(0.), d_(0.), e_(0.), doff_(0.), f_(0.), g_(0.), h_(0.), i_(0.), j_(0.), foff_(0.) {}
     double a_, b_, c_, d_, e_, doff_, f_, g_, h_, i_, j_, foff_;
   };
+  
+  
 
   HGCalRadiationMap();
   ~HGCalRadiationMap() {}
@@ -28,6 +30,8 @@ public:
   void setDoseMap(const std::string &, const unsigned int);
 
   double computeRadius(const HGCScintillatorDetId &);
+  GlobalPoint computePos(const HGCScintillatorDetId &);
+  double computeArea(const HGCScintillatorDetId &);
 
   double getDoseValue(const int, const int, const double, bool logVal = false);
   double getFluenceValue(const int, const int, const double, bool logVal = false);
