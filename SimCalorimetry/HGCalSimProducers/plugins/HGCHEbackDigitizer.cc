@@ -378,7 +378,7 @@ void HGCHEbackDigitizer::runRealisticSciDigitizer(std::unique_ptr<HGCalDigiColle
       radius = scal_.computeRadius(scId);
       auto opChar = scal_.scaleByDose_update(scId, radius, id.rawId(), sigma); // using new for digitiser update
       auto opTileA = scal_.scaleByTileArea(scId, radius); // unused
-      auto opPos = scal_.computePos(scId);
+      //auto opPos = scal_.computePos(scId);
       auto opA = scal_.computeArea(scId);
       //x = opPos.x();
       //y = opPos.y();
