@@ -337,7 +337,7 @@ void HGCHEbackDigitizer::runRealisticSciDigitizer(std::unique_ptr<HGCalDigiColle
   // vanilla reference values are indepenent of the ids and were set by   // UPD: outdated
   // configuration in the python - no need to recomput them every time    // UPD: outdated
   // in the digitization loop // UPD: outdated
-  float scaledPePerMip = nPEperMIP_;                                // needed to scale according to tile geometry  // UPD: outdated
+  //float scaledPePerMip = nPEperMIP_;                                // needed to scale according to tile geometry  // UPD: outdated
   float scaledLYPerMip = -98.8; 				    // UPD: set to obviously wrong for debugging purposes
   float tunedNoise = nPEperMIP_ * noise_MIP_;                       // flat noise case // UPD: outdated/unused at the mement (10/2026)
   float vanillaADCThr = this->myFEelectronics_->getADCThreshold();  // vanilla thrs in MIPs 
@@ -364,8 +364,8 @@ void HGCHEbackDigitizer::runRealisticSciDigitizer(std::unique_ptr<HGCalDigiColle
     float simHitADC(0.f);
     int nPixels_sat = -99;
     int nPixels_sat_smear = -88;
-    double radius, x, y, z;
-    double tileE, tileA;
+    double radius; //, x, y, z;
+    //double tileE, tileA;
     int pedestal = 150; // UPD: value of the expected position of the pedestal determined for the runs
     float adctotfact = 3.; 
 
