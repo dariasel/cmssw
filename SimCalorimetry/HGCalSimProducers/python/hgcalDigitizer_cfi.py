@@ -136,26 +136,26 @@ hgchebackDigitizer = cms.PSet(
     useAllChannels    = cms.bool(True),
     verbosity         = cms.untracked.uint32(0),
     digiCfg = cms.PSet(
-        #0 empty digitizer, 1 calice digitizer, 2 realistic digitizer, 3 realistic sci /proper calice
-        algo          = cms.uint32(3),        
+        #0 empty digitizer, 1 calice digitizer, 2 realistic digitizer, 3 realistic sci
+        algo          = cms.uint32(3),
         noise         = cms.PSet(refToPSet_ = cms.string("HGCAL_noise_heback")), #scales both for scint raddam and sipm dark current
-        keV2MIP       = cms.double(1./455.0),   #to use the MPV value #cms.double(1./675.0),
+        keV2MIP       = cms.double(1./455.0),   # using MIP MPV value (not mean) #cms.double(1./675.0),
         doTimeSamples = cms.bool(False),
         nPEperMIP = cms.double(80.0),  # light yield _ id
         nTotalPE  = cms.double(7500),
-        nTotalPX  = cms.double(39984),
-        SiPM9mmgain4OV12CG = cms.double(0.7),        
-        sdPixels  = cms.double(1e-6), # this is additional photostatistics noise (as implemented), not sure why it's here...
+        nTotalPX  = cms.double(39984), # UPD: number of pixels for 9 mm^2 SiPM, for 4 mm^2 SiPM 17500
+        SiPM9mmgain4OV12CG = cms.double(0.7), # UPD: SiPM gain in ADC; Gain of 0.7 is for ConvGain 4, Overvoltage 2V !! Name wrong, should be changed (TODO)
+        sdPixels  = cms.double(1e-6), # UPD: this value is not used anywhere, so used for the configuring of the sigma for light yield; TODO: name should be changed to not confuse
         thresholdFollowsMIP = cms.bool(thresholdTracksMIP),
         maxADC_ = cms.double(1024.0),
         feCfg = hgcROCSettings.clone(
-            fwVersion         = cms.uint32(1),           # 3 = to have NO shaper then in principle none of the other params matter apart from maybe the ADC threshold, 4 = min shaper
-            adcPulse          = cms.vdouble(0.0, 0.0,   1.0,   0.0,  0.0,  0.0, 0.0, 0.0),
+            fwVersion         = cms.uint32(1),  # UPD: version 1 is Simple Shaper, but this parameter is not used at the moment and the shaper version is called explicitely in the code
+            adcPulse          = cms.vdouble(0.0, 0.0,   1.0,   0.0,  0.0,  0.0), #UPD: no shaping done for now (10/2026), calculated ADC value fully placed in second sample 
             adcNbits        = 10,      # standard ROC operations (was 2 bits more up to 11_0_0_pre12)
             adcSaturation_fC = 68.75,  # keep the adc LSB the same (i.e. set saturation one quarter value of pre12)
             tdcSaturation_fC  = 10000,  # allow up to 1000 MIPs as a max range, including ToA mode
-            targetMIPvalue_ADC   = 15, # to be used for HGCROC gain proposal
-            adcThreshold_fC = 0.5,     # unchanged with respect to pre12
+            targetMIPvalue_ADC   = 15, # to be used for HGCROC gain proposal # UPD: not used in the updated sci digitiser, incorrect assumption about the MIP equalisation
+            adcThreshold_fC = 0.5,     # unchanged with respect to pre12 # UPD: used as vanilla threshold in units of MIPs
             tdcOnset_fC       = 55,    # turn on TDC when 80% of the ADC range is reached (one quarter of pre12
             #                                        indicative at this point)
             tdcForToAOnset_fC = cms.vdouble(12., 12., 12.),  #turn ToA for 20% of the TDC threshold (indicative at this point)

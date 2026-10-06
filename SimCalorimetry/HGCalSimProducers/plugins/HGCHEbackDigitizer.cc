@@ -116,7 +116,7 @@ HGCHEbackDigitizer::HGCHEbackDigitizer(const edm::ParameterSet& ps) : HGCDigitiz
   gainValue = cfg.getParameter<double>("SiPM9mmgain4OV12CG");               ///// Constant SiPM gain in units of ADC for the calculation of digis for ConvGain 2 (!) and OverVoltage 4V
 									    ///// !!! NAME ALREAD WRONG: the value provided (0.7) is for ConvGain 2, not 12 !!
 									    ///// Name should be changed (TODO), can be configured in python, depending on the desired CG and OV
-  sdPixels_ = cfg.getParameter<double>("sdPixels");                         ///// Unused as sdPixels, but configured still to mean the spread for tile light yield (sigma)
+  sdPixels_ = cfg.getParameter<double>("sdPixels"); 			    ///// Unused as sdPixels, but configured still to mean the spread for tile light yield (sigma)
 									    ///// for the realistic Sci digitiser, TODO: rename/add new parameter to configure and not confuse!
   maxADC = cfg.getParameter<double>("maxADC_");                             ///// 10-bit adc, max = 1024
 
@@ -659,7 +659,7 @@ The reverse of this chain should happen in reconstruction to produce Uncalibrate
 
       chargeColl[i] = simHitADC/lightYield_id;
       if (debug && cell.hit_info[0][i] > 0)
-        edm::LogVerbatim("HGCDigitizer") << " HERE HERE HERE HERE HERE HERE HERE HERE HERE HERE HERE HERE En=" << cell.hit_info[0][i]
+        edm::LogVerbatim("HGCDigitizer") << " En=" << cell.hit_info[0][i]
                                          << " keV -> " << totalIniMIPs << " raw-MIPs -> " << chargeColl[i]
                                          << " digi-MIPs"
                                          << " ADCthresh * ly = " << ADCThr* lightYield_id
