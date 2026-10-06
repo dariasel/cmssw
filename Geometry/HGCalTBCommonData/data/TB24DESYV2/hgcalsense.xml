@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<DDDefinition>
+
+<SpecParSection label="hgcsens.xml" eval="true">
+  <SpecPar name="hgchesci">
+    <PartSelector path="//HGCalHEScintillatorSensitive.*"/> 
+    <Parameter name="SensitiveDetector" value="HGCScintillatorSensitiveDetector" eval="false"/>
+    <Parameter name="ReadOutName" value="HGCHitsHEback" eval="false"/>
+  </SpecPar>
+</SpecParSection>
+</DDDefinition>
