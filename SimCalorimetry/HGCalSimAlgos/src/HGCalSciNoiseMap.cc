@@ -208,7 +208,7 @@ HGCalSciNoiseMap::SiPMonTileCharacteristics HGCalSciNoiseMap::scaleByDose_update
   bool hasDoseMap(!(getDoseMap().empty()));
 
   // copied over, but not used and not updated
-  //**
+  ///////////////////////////////////////////
 
   //LIGHT YIELD
   double lyScaleFactor(1.f);
@@ -262,7 +262,7 @@ HGCalSciNoiseMap::SiPMonTileCharacteristics HGCalSciNoiseMap::scaleByDose_update
   if (!ignoreTileType_ && cellId.type() == 2)
     S = nPEperMIP_[MOULDED];
   S *= lyScaleFactor;
-  //**
+  ////////////////////////////////////////////////////////////
 
 
   // updated variables
@@ -283,6 +283,41 @@ HGCalSciNoiseMap::SiPMonTileCharacteristics HGCalSciNoiseMap::scaleByDose_update
   sipmChar.L = L; // updated part, used in the digitiser
   return sipmChar;
 }
+
+
+#include <map>
+float pde(float ov){
+float pdei;
+pdei = (-0.72*ov*ov)+(10.0*ov)+4.41;
+return pdei;
+}
+
+float lyVsize(int type, int phase, float edge, float sipm=4.0, float ov=4.0){
+
+//type = Cast or Molded; Molded = 2, Cast = 1 (??) // Should be like that in CMSSW
+//phase = 10 = pre-series, 0 = production // Daria's addition to create a single map for the function parameters
+
+// Values A and C parameters for LY function for production tiles if 2 and 1, 12 and 11 if pre-series (by adding 10):
+std::map<int, std::vector<float>> LY_params{{2, {2066.53, -7.6}},{1, {1378.53, 32.34}}, {12, {1854.5, -6.52}},{11, {1110.5, 54.8}}};
+
+
+float LYi, sipmfactor, ovfactor, A, C;
+int key;
+sipmfactor = sipm/4;  // ratio between SiPM areas in mm^2, nominal is 4 mm^2
+ovfactor = pde(ov)/pde(4); // ratio of PDE at a given overvoltage and nominal (4V)
+
+key = type+phase;
+std::vector<float>Z = LY_params.at(key);
+A = Z[0];
+C = Z[1];
+LYi = ((A/edge) + C)*sipmfactor*ovfactor;
+//cout << "A: " << A << " C: " << C << endl;
+
+return LYi;
+}
+
+
+
 
 // new function in the update
 // getting tile light yield based on its edge length, LY v edge as formulas, parametrisation from production measurements in DESY's LY test stand
@@ -315,14 +350,20 @@ double HGCalSciNoiseMap::LYByTileArea(const HGCScintillatorDetId& cellId, const 
   // using the calculated tile edge to calculate the mean value for the light yield based on parametrisation for various materials
   // Formulas for 9 mm^2 SiPMs, and SiPM overvoltage of 2V
   // TODO: Configurable functions to be added
-  if (cellId.type() == 2) // Molded scintillator tiles
+
+
+/*  if (cellId.type() == 2) // Molded scintillator tiles
   	{
   	ly = ((4649.7/edge) - 17.1) * ((-0.72*4 + 10.0*2 + 4.41)/(-0.72*16 + 10.0*4 + 4.41)) ; // formula for molded LY for 9mm2 SiPM 2V OV
   	}
   else // all other tiles are supposed to be Cast
   	{
   	ly = ((3101.7/edge) + 72.76) * ((-0.72*4 + 10.0*2 + 4.41)/(-0.72*16 + 10.0*4 + 4.41)) ; // formula for cast LY for 9mm2 SiPM 2V OV
-  	}
+  	}*/
+
+  // lyVsize(tile type (1==cast, 2 == molded), "phase" = 10 or 0 (pre-series or production), tile edge, sipm area (2 or 4 or 9 [mm^2]), overvoltage (e.g. 4 [V]))
+  ly = lyVsize(cellId.type(), 0, edge, 9, 2);
+
   // returning the mean value for a given tile size multiplied by the random modifier dependant on the given tile id = LY of that specific tile
   return ly * var;
 }
