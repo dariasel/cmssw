@@ -35,7 +35,7 @@ HGCalSciNoiseMap::HGCalSciNoiseMap()
   //for the MIP peak to be close to N ADC counts (similar to Si) or applying other specific criteria
   fscADCPerGain_[GAIN_2] = nPEperMIP_[CAST] * 1024. / aimMIPtoADC_;      //2 mm^2  SiPM
   fscADCPerGain_[GAIN_4] = 2 * nPEperMIP_[CAST] * 1024. / aimMIPtoADC_;  //4mm^2   SiPM
-  
+
 
   //lsb: adc has 10 bits -> 1024 counts at max
   for (size_t i = 0; i < GAINRANGE_N; i++)
@@ -311,7 +311,6 @@ std::vector<float>Z = LY_params.at(key);
 A = Z[0];
 C = Z[1];
 LYi = ((A/edge) + C)*sipmfactor*ovfactor;
-//cout << "A: " << A << " C: " << C << endl;
 
 return LYi;
 }

@@ -282,7 +282,7 @@ void HGCFEElectronics<DFr>::runSimpleShaper(DFr& dataFrame,
 //    if (debug)
 //      edm::LogVerbatim("HGCFE") << "\t Redistributing SARS ADC" << charge << " @ " << it;
 
-    for (int ipulse = -2; ipulse < (int)(adcPulse.size()) - 2; ipulse++) {
+  for (int ipulse = -2; ipulse < (int)(adcPulse.size()) - 2; ipulse++) {
       if (it + ipulse < 0)
         continue;
       if (it + ipulse >= (int)(dataFrame.size()))
@@ -304,12 +304,18 @@ void HGCFEElectronics<DFr>::runSimpleShaper(DFr& dataFrame,
   HGCSample newSample;
 
 // ratio between ADC bins and TDC bins is approx 3, which is used here for the "trivial tot":
+
+
+// changed------
 // if the signal is outside the dynamic range of the ADC, then setToAValid(true) and set the sample to adc/3, provided adc/3 is within tdc range (less than 4095)
 // setToAValid used, since some tot flag is needed and this seems to be the one available in the structure of these sample. TODO: check if its ok / introduce new
 // setting the digi value to integer adc/3 and making sure it is know via the setToAValit true
 // this way in analysis this can be used as a flag and the digi multiplied by 3 (to emulate TOT to ADC conversion)
 // !!!! at the moment (10/2026) this is only compatible with the separate analysis of the digis
 // TODO: need to make necessary changes, such that this works properly with the rest of the CMSSW reconstruction chain
+
+//Update (2026-10-12): newSample.setToAValid(true) replaced with newSample.setMode(true); Mode should be the "TOT" mode, either on (true) or not (false)
+// -------------
 
 // Important note: a strange behaviour of the <sample>.set() was observed: if the value exceeded the 4095 by n (0 < n < 4095), the value of the sample (the data) was set to n;
 // when the value exceeded 4095 by i*n, the value of the sample (the data) was also set to n;
@@ -318,17 +324,17 @@ void HGCFEElectronics<DFr>::runSimpleShaper(DFr& dataFrame,
 
   if (adc >= maxADC && adc/3 < 4095){
   	newSample.set(adc > thrADC, false, gainIdx, 0, adc/3);
-  	newSample.setToAValid(true);
+  	newSample.setMode(true); // TOT mode
   	dataFrame.setSample(it, newSample);
   }
   else if (adc >= maxADC && adc/3 >= 4095){
   	newSample.set(adc > thrADC, false, gainIdx, 0, 4095);  // if the signal is out of the TDC dynamic range, set the value to the maximum
-  	newSample.setToAValid(true);
+  	newSample.setMode(true); // TOT mode
  	dataFrame.setSample(it, newSample);
   }
   else {
   	newSample.set(adc > thrADC, false, gainIdx, 0, adc);
-  	newSample.setToAValid(false);
+  	newSample.setMode(false); // TOT mode
   	dataFrame.setSample(it, newSample);
   }
 }
